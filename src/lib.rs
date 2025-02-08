@@ -1,3 +1,5 @@
+pub mod view;
+
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{
     env, near_bindgen, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue};
@@ -5,6 +7,7 @@ use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use serde_json;
 
 const NO_DEPOSIT: NearToken = NearToken::from_yoctonear(0);
 const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(50);
