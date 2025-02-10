@@ -2,17 +2,22 @@ pub mod view;
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{
-    env, near_bindgen, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue};
+    env, near_bindgen, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
+};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use serde_json;
 
+// Constants for gas and deposits.
 const NO_DEPOSIT: NearToken = NearToken::from_yoctonear(0);
 const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(50);
 const MSG_ADD_REWARD: &str = "ADD_REWARD";
 const MSG_STAKE: &str = "STAKE";
+
+// A multiplier to track rewards with high precision.
+const ACC_REWARD_MULTIPLIER: u128 = 1_000_000_000_000;
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum StorageKey {
@@ -41,8 +46,11 @@ pub struct FarmParams {
     pub start_time: u64,
     pub last_distribution: u64,
     pub total_staked: u128,
+    /// Scaled by ACC_REWARD_MULTIPLIER.
     pub reward_per_share: Vec<u128>,
     pub lockup_period: u64,
+    /// Tracks the remaining reward tokens available for distribution.
+    pub remaining_reward: Vec<u128>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -60,7 +68,7 @@ pub struct ChildFarmingContract {
     stakes: UnorderedMap<(AccountId, u64), StakeInfo>,
     farm_count: u64,
     storage_deposits: UnorderedMap<AccountId, Balance>,
-    admin: AccountId
+    admin: AccountId,
 }
 
 #[near_bindgen]
@@ -73,7 +81,7 @@ impl ChildFarmingContract {
             stakes: UnorderedMap::new(b"stakes".to_vec()),
             farm_count: 0,
             storage_deposits: UnorderedMap::new(b"storage_deposits".to_vec()),
-            admin
+            admin,
         }
     }
 
@@ -86,12 +94,16 @@ impl ChildFarmingContract {
         let staking_token_bytes = 32;
         let reward_tokens_bytes = 32 * (num_rewards as u64);
 
+        // Additional storage for the remaining_reward vector.
+        let remaining_reward_bytes = 16 * (num_rewards as u64);
+
         overhead
             + base_bytes
             + reward_per_share_bytes
             + reward_per_session_bytes
             + staking_token_bytes
             + reward_tokens_bytes
+            + remaining_reward_bytes
     }
 
     fn estimate_stake_storage(num_rewards: usize) -> u64 {
@@ -143,7 +155,13 @@ impl ChildFarmingContract {
     #[payable]
     pub fn create_farm(&mut self, input: FarmInput) -> u64 {
         let creator = env::predecessor_account_id();
-        
+
+        // Validate that session_interval_sec is not zero.
+        assert!(
+            input.session_interval_sec > 0,
+            "Session interval must be greater than 0"
+        );
+
         let num_rewards = input.reward_tokens.len();
         let required_bytes = Self::estimate_farm_storage(num_rewards);
         self.assert_storage_sufficient(creator.clone(), required_bytes);
@@ -176,6 +194,9 @@ impl ChildFarmingContract {
             rpsession_values.push(x.0);
         }
 
+        // Initially, the remaining reward pool is zero; rewards must be funded via ADD_REWARD.
+        let remaining_reward = vec![0_u128; num_rewards];
+
         let farm = FarmParams {
             staking_token: input.staking_token,
             reward_tokens: input.reward_tokens,
@@ -186,6 +207,7 @@ impl ChildFarmingContract {
             total_staked: 0,
             reward_per_share: rps,
             lockup_period: lockup_ns,
+            remaining_reward,
         };
 
         self.farms.insert(&farm_id, &farm);
@@ -194,7 +216,8 @@ impl ChildFarmingContract {
             format!(
                 "Created farm {} with session_interval_sec: {}, reward_per_session: {:?}",
                 farm_id, input.session_interval_sec, input.reward_per_session
-            ).as_str()
+            )
+            .as_str()
         );
 
         farm_id
@@ -222,17 +245,25 @@ impl ChildFarmingContract {
         let elapsed = current_time.saturating_sub(farm.last_distribution);
         let sessions_elapsed = elapsed / farm.session_interval;
         if sessions_elapsed == 0 {
-            // not enough time for a full session
             self.farms.insert(&farm_id, &farm);
             return;
         }
 
         for i in 0..farm.reward_tokens.len() {
-            let total_reward = (sessions_elapsed as u128)
-                .saturating_mul(farm.reward_per_session[i]);
-            if total_reward > 0 {
-                let inc = total_reward / farm.total_staked;
+            // Calculate how many tokens should be distributed for these sessions.
+            let potential_reward = (sessions_elapsed as u128).saturating_mul(farm.reward_per_session[i]);
+            // Only distribute up to the available reward tokens.
+            let reward_to_distribute = if potential_reward > farm.remaining_reward[i] {
+                farm.remaining_reward[i]
+            } else {
+                potential_reward
+            };
+            if reward_to_distribute > 0 {
+                // Use the multiplier to update reward per share.
+                let inc = reward_to_distribute.saturating_mul(ACC_REWARD_MULTIPLIER) / farm.total_staked;
                 farm.reward_per_share[i] = farm.reward_per_share[i].saturating_add(inc);
+                // Deduct the distributed reward from the remaining pool.
+                farm.remaining_reward[i] = farm.remaining_reward[i].saturating_sub(reward_to_distribute);
             }
         }
 
@@ -276,12 +307,14 @@ impl ChildFarmingContract {
         }
     }
 
+    /// Updates the reward pool for a farm.
     fn add_reward(&mut self, farm_id: u64, token_in: AccountId, amount: u128, sender: &AccountId) {
-        let farm = self.farms.get(&farm_id).expect("Farm not found");
-        let pos = farm.reward_tokens.iter().position(|t| t == &token_in);
-        if pos.is_none() {
-            env::panic_str("This token is not a valid reward token for the farm.");
-        }
+        let mut farm = self.farms.get(&farm_id).expect("Farm not found");
+        let pos = farm.reward_tokens.iter().position(|t| t == &token_in)
+            .expect("This token is not a valid reward token for the farm.");
+        // Add the incoming reward tokens to the reward pool.
+        farm.remaining_reward[pos] = farm.remaining_reward[pos].saturating_add(amount);
+        self.farms.insert(&farm_id, &farm);
         env::log_str(
             format!(
                 "User {} added {} tokens as reward to farm {}",
@@ -302,7 +335,7 @@ impl ChildFarmingContract {
 
         self.update_farm(farm_id);
 
-        // either create or load existing stake
+        // Either create or load existing stake.
         let mut stake_info = self
             .stakes
             .get(&stake_key)
@@ -313,7 +346,7 @@ impl ChildFarmingContract {
                 accrued_rewards: vec![0; farm.reward_tokens.len()],
             });
 
-        // settle existing pending
+        // Settle any pending rewards.
         for i in 0..farm.reward_tokens.len() {
             let pending = self.calculate_pending(&farm, &stake_info, i);
             if pending > 0 {
@@ -323,10 +356,10 @@ impl ChildFarmingContract {
             stake_info.reward_debt[i] = farm.reward_per_share[i];
         }
 
-        // increase staked
+        // Increase staked amount.
         stake_info.amount = stake_info.amount.saturating_add(amount);
 
-        // optionally extend lockup
+        // Optionally extend lockup.
         let new_lockup = env::block_timestamp() + farm.lockup_period;
         if new_lockup > stake_info.lockup_end {
             stake_info.lockup_end = new_lockup;
@@ -346,13 +379,12 @@ impl ChildFarmingContract {
         );
     }
 
+    /// Calculates the pending reward for a given reward token index.
     fn calculate_pending(&self, farm: &FarmParams, stake_info: &StakeInfo, i: usize) -> u128 {
-        let rps_now = farm.reward_per_share[i];
-        let rps_debt = stake_info.reward_debt[i];
-        let diff = rps_now.saturating_sub(rps_debt);
-        stake_info.amount.saturating_mul(diff)
+        let diff = farm.reward_per_share[i].saturating_sub(stake_info.reward_debt[i]);
+        // Unscale the pending reward.
+        stake_info.amount.saturating_mul(diff) / ACC_REWARD_MULTIPLIER
     }
-
 
     #[payable]
     pub fn claim_rewards(&mut self, farm_id: u64) {
@@ -372,7 +404,7 @@ impl ChildFarmingContract {
             stake_info.reward_debt[i] = farm.reward_per_share[i];
         }
 
-        // Cross-contract transfer each accrued reward
+        // Cross-contract transfer each accrued reward.
         for i in 0..farm.reward_tokens.len() {
             let amount = stake_info.accrued_rewards[i];
             if amount > 0 {
@@ -416,12 +448,11 @@ impl ChildFarmingContract {
 
         self.update_farm(farm_id);
 
-        // settle new pending
+        // Settle pending rewards.
         for i in 0..farm.reward_tokens.len() {
             let pending = self.calculate_pending(&farm, &stake_info, i);
             if pending > 0 {
-                stake_info.accrued_rewards[i] =
-                    stake_info.accrued_rewards[i].saturating_add(pending);
+                stake_info.accrued_rewards[i] = stake_info.accrued_rewards[i].saturating_add(pending);
             }
             stake_info.reward_debt[i] = farm.reward_per_share[i];
         }
@@ -436,7 +467,7 @@ impl ChildFarmingContract {
         }
         self.farms.insert(&farm_id, &farm);
 
-        // cross-contract ft_transfer
+        // Cross-contract ft_transfer of staking tokens.
         let staking_token_id = farm.staking_token.clone();
         Promise::new(staking_token_id).function_call(
             "ft_transfer".to_string().into(),
@@ -469,7 +500,6 @@ mod tests {
     use core::convert::TryFrom;
     use near_sdk::testing_env;
     
-
     fn get_context(
         predecessor: AccountId,
         block_timestamp_nanos: u64,
@@ -614,7 +644,7 @@ mod tests {
         // staker calls ft_on_transfer with no deposit in `storage_deposits`.
         let msg = format!("STAKE:{}", farm_id);
         contract.ft_on_transfer(
-            AccountId::try_from(accounts(1)).unwrap(), // or still accounts(0)
+            AccountId::try_from(accounts(1)).unwrap(),
             U128(100),
             msg
         );
@@ -670,7 +700,18 @@ mod tests {
         };
         let farm_id = contract.create_farm(input);
 
-        // stake 100
+        // Fund the farm with enough reward tokens for 2 sessions.
+        let add_reward_msg = "ADD_REWARD:0".to_string();
+        context = get_context("reward.token".parse().unwrap(), 0, 0);
+        testing_env!(context.build());
+        // For 2 sessions, we need 2 * 100 = 200 tokens.
+        contract.ft_on_transfer(
+            AccountId::try_from(accounts(0)).unwrap(),
+            U128(200),
+            add_reward_msg
+        );
+
+        // stake 100 tokens
         let msg = "STAKE:0".to_string();
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
@@ -680,16 +721,18 @@ mod tests {
             msg
         );
 
-        // move time forward => 25s => 2 sessions
+        // move time forward => 25s => 2 sessions have elapsed.
         context = get_context(accounts(0), 25_000_000_000, 1);
         testing_env!(context.build());
         contract.claim_rewards(farm_id);
 
         let farm = contract.farms.get(&farm_id).unwrap();
-        // 2 sessions => total=200 => reward_per_share=200/100=2
-        assert_eq!(farm.reward_per_share[0], 2);
+        // With 2 sessions and 100 tokens per session distributed over 100 staked tokens,
+        // the raw reward_per_share should have increased by 2 * ACC_REWARD_MULTIPLIER.
+        // We check the unscaled value.
+        assert_eq!(farm.reward_per_share[0] / ACC_REWARD_MULTIPLIER, 2);
 
-        // after claim => accrued=0
+        // after claim => accrued rewards should be 0.
         let stake_key = (accounts(0), farm_id);
         let stake_info = contract.stakes.get(&stake_key).unwrap();
         assert_eq!(stake_info.accrued_rewards[0], 0);
@@ -713,7 +756,7 @@ mod tests {
         };
         let farm_id = contract.create_farm(input);
 
-        // stake
+        // stake tokens
         let msg = "STAKE:0".to_string();
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
@@ -723,7 +766,7 @@ mod tests {
             msg
         );
 
-        // at t=1s => fail
+        // at t=1s => withdraw should fail due to lockup.
         context = get_context(accounts(0), 1_000_000_000, 1);
         testing_env!(context.build());
         contract.withdraw(farm_id, U128(50));
@@ -746,7 +789,7 @@ mod tests {
         };
         let farm_id = contract.create_farm(input);
 
-        // stake
+        // stake tokens
         let msg = "STAKE:0".to_string();
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
@@ -760,14 +803,14 @@ mod tests {
         context = get_context(accounts(0), 1_000_000_000, 0);
         testing_env!(context.build());
 
-        // now t=3s => beyond lockup
+        // now at t=3s (beyond lockup) => withdraw half.
         context = get_context(accounts(0), 3_000_000_000, 1);
         testing_env!(context.build());
         contract.withdraw(farm_id, U128(50));
 
         let stake_key = (accounts(0), farm_id);
         let stake_info = contract.stakes.get(&stake_key).unwrap();
-        // withdrew half
+        // withdrew half, leaving 50 staked.
         assert_eq!(stake_info.amount, 50);
     }
 
@@ -778,7 +821,7 @@ mod tests {
         let mut contract = ChildFarmingContract::new("owner.testnet".parse().unwrap());
         contract.storage_deposit();
 
-        // farm that starts at sec=100
+        // Create a farm that starts at sec=100.
         let input = FarmInput {
             staking_token: "staking.token".parse().unwrap(),
             reward_tokens: vec!["reward.token".parse().unwrap()],
@@ -789,7 +832,7 @@ mod tests {
         };
         let farm_id = contract.create_farm(input);
 
-        // stake at time=0
+        // Stake at time=0.
         let msg = "STAKE:0".to_string();
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
@@ -799,13 +842,13 @@ mod tests {
             msg
         );
 
-        // time => 50 => still before start(=100)
+        // Advance time to 50 seconds => still before the start time.
         context = get_context(accounts(0), 50_000_000_000, 1);
         testing_env!(context.build());
         contract.claim_rewards(farm_id);
 
         let farm = contract.farms.get(&farm_id).unwrap();
-        // no sessions => reward_per_share=0
+        // No sessions have elapsed so reward_per_share should be 0.
         assert_eq!(farm.reward_per_share[0], 0);
     }
 }
