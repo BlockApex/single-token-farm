@@ -11,7 +11,6 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use serde_json;
 
 // Constants for gas and deposits.
-const NO_DEPOSIT: NearToken = NearToken::from_yoctonear(0);
 const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(50);
 const MSG_ADD_REWARD: &str = "ADD_REWARD";
 const MSG_STAKE: &str = "STAKE";
@@ -482,7 +481,7 @@ impl ChildFarmingContract {
                         "amount": U128(amount),
                     }))
                     .unwrap(),
-                    NO_DEPOSIT,
+                    NearToken::from_yoctonear(1),
                     GAS_FOR_FT_TRANSFER,
                 );
             }
@@ -541,7 +540,7 @@ impl ChildFarmingContract {
                 "amount": U128(to_withdraw),
             }))
             .unwrap(),
-            NO_DEPOSIT,
+            NearToken::from_yoctonear(1),
             GAS_FOR_FT_TRANSFER,
         );
 
