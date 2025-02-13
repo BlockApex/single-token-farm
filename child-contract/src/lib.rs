@@ -349,6 +349,42 @@ impl ChildFarmingContract {
         );
     }
 
+    fn simulate_update_farm(&self, farm: &FarmParams) -> FarmParams {
+        let mut sim = farm.clone();
+        let current_time = env::block_timestamp();
+        if current_time >= sim.start_time && sim.total_staked > 0 {
+            let elapsed = current_time.saturating_sub(sim.last_distribution);
+            let sessions_elapsed = elapsed / sim.session_interval;
+            if sessions_elapsed > 0 {
+                for i in 0..sim.reward_tokens.len() {
+                    let potential_reward = (sessions_elapsed as u128)
+                        .saturating_mul(sim.reward_per_session[i]);
+                    let reward_to_distribute = if potential_reward > sim.remaining_reward[i] {
+                        sim.remaining_reward[i]
+                    } else {
+                        potential_reward
+                    };
+                    if reward_to_distribute > 0 {
+                        let inc = reward_to_distribute
+                            .saturating_mul(ACC_REWARD_MULTIPLIER)
+                            / sim.total_staked;
+                        sim.reward_per_share[i] = sim.reward_per_share[i].saturating_add(inc);
+                        sim.remaining_reward[i] = sim.remaining_reward[i].saturating_sub(reward_to_distribute);
+                    }
+                }
+                let dist_ns = sessions_elapsed * sim.session_interval;
+                sim.last_distribution = sim.last_distribution.saturating_add(dist_ns);
+                if sim.last_distribution > current_time {
+                    sim.last_distribution = current_time;
+                }
+                if sim.remaining_reward.iter().all(|&r| r == 0) {
+                    sim.status = FarmStatus::Ended;
+                }
+            }
+        }
+        sim
+    }
+
     fn stake_tokens(&mut self, farm_id: u64, token_in: AccountId, amount: u128, sender: &AccountId) {
         let mut farm = self.farms.get(&farm_id).expect("Farm not found");
 

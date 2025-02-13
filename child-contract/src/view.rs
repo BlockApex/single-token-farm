@@ -91,12 +91,24 @@ impl ChildFarmingContract {
         let key = (account_id, farm_id);
         if let Some(info) = self.stakes.get(&key) {
             if let Some(farm) = self.farms.get(&farm_id) {
+                let sim_farm = self.simulate_update_farm(&farm);
+                // Compute pending rewards per reward token:
+                let updated_accrued: Vec<U128> = info.accrued_rewards
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &val)| {
+                        let pending = info.amount
+                            .saturating_mul(sim_farm.reward_per_share[i].saturating_sub(info.reward_debt[i]))
+                            / ACC_REWARD_MULTIPLIER;
+                        U128(val.saturating_add(pending))
+                    })
+                    .collect();
                 return Some(StakeInfoView {
                     farm_id,
                     amount: U128(info.amount),
                     lockup_end_sec: info.lockup_end / 1_000_000_000,
                     reward_debt: info.reward_debt.iter().map(|v| U128(*v)).collect(),
-                    accrued_rewards: info.accrued_rewards.iter().map(|v| U128(*v)).collect(),
+                    accrued_rewards: updated_accrued,
                     reward_tokens: farm.reward_tokens.clone(),
                 });
             }
@@ -121,20 +133,29 @@ impl ChildFarmingContract {
                     continue;
                 }
                 if count < limit {
-                    let reward_tokens = if let Some(farm) = self.farms.get(&farm_id) {
-                        farm.reward_tokens.clone()
-                    } else {
-                        vec![]
-                    };
-                    results.push(StakeInfoView {
-                        farm_id,
-                        amount: U128(stake_info.amount),
-                        lockup_end_sec: stake_info.lockup_end / 1_000_000_000,
-                        reward_debt: stake_info.reward_debt.iter().map(|v| U128(*v)).collect(),
-                        accrued_rewards: stake_info.accrued_rewards.iter().map(|v| U128(*v)).collect(),
-                        reward_tokens,
-                    });
-                    count += 1;
+                    if let Some(farm) = self.farms.get(&farm_id) {
+                        let sim_farm = self.simulate_update_farm(&farm);
+                        let updated_accrued: Vec<U128> = stake_info
+                            .accrued_rewards
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &val)| {
+                                let pending = stake_info.amount
+                                    .saturating_mul(sim_farm.reward_per_share[i].saturating_sub(stake_info.reward_debt[i]))
+                                    / ACC_REWARD_MULTIPLIER;
+                                U128(val.saturating_add(pending))
+                            })
+                            .collect();
+                        results.push(StakeInfoView {
+                            farm_id,
+                            amount: U128(stake_info.amount),
+                            lockup_end_sec: stake_info.lockup_end / 1_000_000_000,
+                            reward_debt: stake_info.reward_debt.iter().map(|v| U128(*v)).collect(),
+                            accrued_rewards: updated_accrued,
+                            reward_tokens: farm.reward_tokens.clone(),
+                        });
+                        count += 1;
+                    }
                 } else {
                     break;
                 }
