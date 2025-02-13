@@ -18,6 +18,7 @@ pub struct FarmView {
     pub total_staked: U128,
     pub reward_per_share: Vec<U128>,
     pub lockup_period_sec: u64,
+    pub status: FarmStatus,
 }
 
 impl From<(&FarmParams, u64)> for FarmView {
@@ -47,6 +48,7 @@ impl From<(&FarmParams, u64)> for FarmView {
                 .collect(),
 
             lockup_period_sec: farm.lockup_period / 1_000_000_000,
+            status: farm.status.clone(),
         }
     }
 }
@@ -59,18 +61,7 @@ pub struct StakeInfoView {
     pub lockup_end_sec: u64,
     pub reward_debt: Vec<U128>,
     pub accrued_rewards: Vec<U128>,
-}
-
-impl From<(&StakeInfo, u64)> for StakeInfoView {
-    fn from((info, farm_id): (&StakeInfo, u64)) -> Self {
-        StakeInfoView {
-            farm_id,
-            amount: U128(info.amount),
-            lockup_end_sec: info.lockup_end / 1_000_000_000,
-            reward_debt: info.reward_debt.iter().map(|v| U128(*v)).collect(),
-            accrued_rewards: info.accrued_rewards.iter().map(|v| U128(*v)).collect(),
-        }
-    }
+    pub reward_tokens: Vec<AccountId>,
 }
 
 #[near_bindgen]
@@ -98,8 +89,21 @@ impl ChildFarmingContract {
         farm_id: u64
     ) -> Option<StakeInfoView> {
         let key = (account_id, farm_id);
-        self.stakes.get(&key).map(|info| StakeInfoView::from((&info, farm_id)))
+        if let Some(info) = self.stakes.get(&key) {
+            if let Some(farm) = self.farms.get(&farm_id) {
+                return Some(StakeInfoView {
+                    farm_id,
+                    amount: U128(info.amount),
+                    lockup_end_sec: info.lockup_end / 1_000_000_000,
+                    reward_debt: info.reward_debt.iter().map(|v| U128(*v)).collect(),
+                    accrued_rewards: info.accrued_rewards.iter().map(|v| U128(*v)).collect(),
+                    reward_tokens: farm.reward_tokens.clone(),
+                });
+            }
+        }
+        None
     }
+
 
     pub fn list_stakes_by_user(
         &self, 
@@ -117,8 +121,19 @@ impl ChildFarmingContract {
                     continue;
                 }
                 if count < limit {
-                    let view = StakeInfoView::from((&stake_info, farm_id));
-                    results.push(view);
+                    let reward_tokens = if let Some(farm) = self.farms.get(&farm_id) {
+                        farm.reward_tokens.clone()
+                    } else {
+                        vec![]
+                    };
+                    results.push(StakeInfoView {
+                        farm_id,
+                        amount: U128(stake_info.amount),
+                        lockup_end_sec: stake_info.lockup_end / 1_000_000_000,
+                        reward_debt: stake_info.reward_debt.iter().map(|v| U128(*v)).collect(),
+                        accrued_rewards: stake_info.accrued_rewards.iter().map(|v| U128(*v)).collect(),
+                        reward_tokens,
+                    });
                     count += 1;
                 } else {
                     break;

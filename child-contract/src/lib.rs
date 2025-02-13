@@ -26,6 +26,14 @@ pub enum StorageKey {
     StorageDeposits,
 }
 
+#[derive(BorshDeserialize, BorshSerialize, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+#[derive(Clone)]
+pub enum FarmStatus {
+    Active,
+    Ended,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FarmInput {
@@ -51,6 +59,8 @@ pub struct FarmParams {
     pub lockup_period: u64,
     /// Tracks the remaining reward tokens available for distribution.
     pub remaining_reward: Vec<u128>,
+    /// New field to track the farm status.
+    pub status: FarmStatus,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -96,6 +106,7 @@ impl ChildFarmingContract {
 
         // Additional storage for the remaining_reward vector.
         let remaining_reward_bytes = 16 * (num_rewards as u64);
+        let status_bytes = 8;
 
         overhead
             + base_bytes
@@ -104,6 +115,7 @@ impl ChildFarmingContract {
             + staking_token_bytes
             + reward_tokens_bytes
             + remaining_reward_bytes
+            + status_bytes
     }
 
     fn estimate_stake_storage(num_rewards: usize) -> u64 {
@@ -208,6 +220,7 @@ impl ChildFarmingContract {
             reward_per_share: rps,
             lockup_period: lockup_ns,
             remaining_reward,
+            status: FarmStatus::Active,
         };
 
         self.farms.insert(&farm_id, &farm);
@@ -228,6 +241,12 @@ impl ChildFarmingContract {
     fn update_farm(&mut self, farm_id: u64) {
         let mut farm = self.farms.get(&farm_id).expect("Farm not found");
         let current_time = env::block_timestamp();
+
+        // Do not update if the farm already ended.
+        if farm.status == FarmStatus::Ended {
+            self.farms.insert(&farm_id, &farm);
+            return;
+        }
 
         if current_time < farm.start_time {
             // not started yet
@@ -271,6 +290,12 @@ impl ChildFarmingContract {
         farm.last_distribution = farm.last_distribution.saturating_add(dist_ns);
         if farm.last_distribution > current_time {
             farm.last_distribution = current_time;
+        }
+
+        // If all reward pools are empty, mark the farm as ended.
+        if farm.remaining_reward.iter().all(|&r| r == 0) {
+            farm.status = FarmStatus::Ended;
+            env::log_str(format!("Farm {} has ended due to exhausted rewards.", farm_id).as_str());
         }
 
         self.farms.insert(&farm_id, &farm);
@@ -326,6 +351,10 @@ impl ChildFarmingContract {
 
     fn stake_tokens(&mut self, farm_id: u64, token_in: AccountId, amount: u128, sender: &AccountId) {
         let mut farm = self.farms.get(&farm_id).expect("Farm not found");
+
+        // Reject staking if the farm is ended.
+        assert_eq!(farm.status, FarmStatus::Active, "Farm is ended, staking not allowed");
+
         assert_eq!(farm.staking_token, token_in, "Not the correct staking token");
         let stake_key = (sender.clone(), farm_id);
         if self.stakes.get(&stake_key).is_none() {
@@ -346,7 +375,7 @@ impl ChildFarmingContract {
                 accrued_rewards: vec![0; farm.reward_tokens.len()],
             });
 
-        // Settle any pending rewards.
+            // Settle any pending rewards.
         for i in 0..farm.reward_tokens.len() {
             let pending = self.calculate_pending(&farm, &stake_info, i);
             if pending > 0 {
@@ -499,7 +528,7 @@ mod tests {
     use near_sdk::test_utils::VMContextBuilder;
     use core::convert::TryFrom;
     use near_sdk::testing_env;
-    
+
     fn get_context(
         predecessor: AccountId,
         block_timestamp_nanos: u64,
@@ -540,6 +569,7 @@ mod tests {
         let farm = contract.farms.get(&0).unwrap();
         assert_eq!(farm.staking_token, "staking.token");
         assert_eq!(farm.reward_tokens.len(), 1);
+        assert_eq!(farm.status, FarmStatus::Active);
     }
 
     /// Should panic if user has no storage deposit
@@ -565,7 +595,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Insufficient storage. Need")]
     fn test_create_farm_insufficient_storage_multitoken() {
-        let context = get_context(accounts(0), 0, 1); 
+        let context = get_context(accounts(0), 0, 1);
         testing_env!(context.build());
         let mut contract = ChildFarmingContract::new("owner.testnet".parse().unwrap());
         contract.storage_deposit();
@@ -607,8 +637,8 @@ mod tests {
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
         contract.ft_on_transfer(
-            AccountId::try_from(accounts(0)).unwrap(),
-            U128(500),
+            AccountId::try_from(accounts(0)).unwrap(), 
+            U128(500), 
             msg
         );
 
@@ -626,7 +656,7 @@ mod tests {
         testing_env!(context.build());
         let mut contract = ChildFarmingContract::new("owner.testnet".parse().unwrap());
         contract.storage_deposit(); // now user(0) can create a farm
-    
+
         // create farm
         let farm_id = contract.create_farm(FarmInput {
             staking_token: "staking.token".parse().unwrap(),
@@ -636,7 +666,7 @@ mod tests {
             session_interval_sec: 5,
             start_at_sec: 0,
         });
-    
+
         // 2) Now reset context for the same user or a different user but with minimal deposit
         //    e.g. user has 0 deposit. 
         let new_ctx = get_context("staking.token".parse().unwrap(), 0, 1); 
@@ -645,7 +675,7 @@ mod tests {
         let msg = format!("STAKE:{}", farm_id);
         contract.ft_on_transfer(
             AccountId::try_from(accounts(1)).unwrap(),
-            U128(100),
+            U128(100), 
             msg
         );
     }
@@ -674,8 +704,8 @@ mod tests {
         context = get_context("reward.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
         contract.ft_on_transfer(
-            AccountId::try_from(accounts(0)).unwrap(),
-            U128(10_000),
+            AccountId::try_from(accounts(0)).unwrap(), 
+            U128(10_000), 
             msg
         );
         // no direct checks here
@@ -707,17 +737,17 @@ mod tests {
         // For 2 sessions, we need 2 * 100 = 200 tokens.
         contract.ft_on_transfer(
             AccountId::try_from(accounts(0)).unwrap(),
-            U128(200),
-            add_reward_msg
-        );
+             U128(200), 
+             add_reward_msg
+            );
 
         // stake 100 tokens
         let msg = "STAKE:0".to_string();
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
         contract.ft_on_transfer(
-            AccountId::try_from(accounts(0)).unwrap(),
-            U128(100),
+            AccountId::try_from(accounts(0)).unwrap(), 
+            U128(100), 
             msg
         );
 
@@ -761,8 +791,8 @@ mod tests {
         context = get_context("staking.token".parse().unwrap(), 0, 0);
         testing_env!(context.build());
         contract.ft_on_transfer(
-            AccountId::try_from(accounts(0)).unwrap(),
-            U128(100),
+            AccountId::try_from(accounts(0)).unwrap(), 
+            U128(100), 
             msg
         );
 
@@ -795,7 +825,7 @@ mod tests {
         testing_env!(context.build());
         contract.ft_on_transfer(
             AccountId::try_from(accounts(0)).unwrap(),
-            U128(100),
+            U128(100), 
             msg
         );
 
@@ -838,8 +868,8 @@ mod tests {
         testing_env!(context.build());
         contract.ft_on_transfer(
             AccountId::try_from(accounts(0)).unwrap(),
-            U128(100),
-            msg
+            U128(100), 
+             msg
         );
 
         // Advance time to 50 seconds => still before the start time.
@@ -850,5 +880,45 @@ mod tests {
         let farm = contract.farms.get(&farm_id).unwrap();
         // No sessions have elapsed so reward_per_share should be 0.
         assert_eq!(farm.reward_per_share[0], 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Farm is ended, staking not allowed")]
+    fn test_stake_on_ended_farm() {
+        // Set up contract and deposit storage for accounts(0) and accounts(1).
+        let deposit = 1_000_000_000_000_000_000_000_000;
+        let mut context = get_context(accounts(0), 0, deposit);
+        testing_env!(context.build());
+        let mut contract = ChildFarmingContract::new("owner.testnet".parse().unwrap());
+        contract.storage_deposit();
+        // Also deposit storage for accounts(1).
+        context = get_context(accounts(1), 0, deposit);
+        testing_env!(context.build());
+        contract.storage_deposit();
+        // Create a farm.
+        let input = FarmInput {
+            staking_token: "staking.token".parse().unwrap(),
+            reward_tokens: vec!["reward.token".parse().unwrap()],
+            lockup_period_sec: 10,
+            reward_per_session: vec![U128(100)],
+            session_interval_sec: 5,
+            start_at_sec: 0,
+        };
+        let farm_id = contract.create_farm(input);
+        // Fund the farm with 50 tokens (insufficient for one full session).
+        let add_reward_msg = "ADD_REWARD:0".to_string();
+        context = get_context("reward.token".parse().unwrap(), 0, 1);
+        testing_env!(context.build());
+        contract.ft_on_transfer(AccountId::try_from(accounts(0)).unwrap(), U128(50), add_reward_msg);
+        let stake_msg = "STAKE:0".to_string();
+        context = get_context("staking.token".parse().unwrap(), 0, 1);
+        testing_env!(context.build());
+        contract.ft_on_transfer(AccountId::try_from(accounts(0)).unwrap(), U128(100), stake_msg.clone());
+        context = get_context(accounts(0), 10_000_000_000, 1);
+        testing_env!(context.build());
+        contract.claim_rewards(farm_id);
+        context = get_context("staking.token".parse().unwrap(), 10_000_000_000, 1);
+        testing_env!(context.build());
+        contract.ft_on_transfer(AccountId::try_from(accounts(1)).unwrap(), U128(50), stake_msg);
     }
 }
