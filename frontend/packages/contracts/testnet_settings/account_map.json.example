@@ -1,0 +1,13 @@
+{
+  "prefix": "76d3641f219fe7d2fc25",
+  "ownerAccount": "76d3641f219fe7d2fc25owner.testnet",
+  "usdtTokenAccount": "76d3641f219fe7d2fc25usdt.testnet",
+  "jumpTokenAccount": "76d3641f219fe7d2fc25jump_token.testnet",
+  "xTokenAccount": "76d3641f219fe7d2fc25xjump_token.testnet",
+  "lockedTokenAccount": "76d3641f219fe7d2fc25locked_token.testnet",
+  "nftStaking": "76d3641f219fe7d2fc25nft_staking.testnet",
+  "launchpad": "76d3641f219fe7d2fc25launchpad.testnet",
+  "tokenLauncher": "76d3641f219fe7d2fc25tokenlauncher.testnet",
+  "faucet": "76d3641f219fe7d2fc25faucet.testnet",
+  "last_block_height": 160649440
+}

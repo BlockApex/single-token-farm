@@ -1,0 +1,38 @@
+{
+  "name": "@near/contracts",
+  "version": "0.0.1",
+  "license": "UNLICENSED",
+  "main": "lib/index.ts",
+  "scripts": {
+    "clean:contract": "cargo clean",
+    "build:contract": "node compile.js",
+    "build:contract:debug": "node compile.js",
+    "dev:deploy:contract": "near dev-deploy",
+    "deploy:contract": "near deploy",
+    "deploy:testnet": "yarn build:contract && cd testnet_settings/cd_setup && node index.js && cd ../..",
+    "deploy": "yarn build:contract && npm run deploy:contract",
+    "prestart": "npm run build:contract:debug && npm run dev:deploy:contract",
+    "test:rust": "npm run build:contract && cargo test -- --nocapture && cd nft_staking && cargo test -- --nocapture && cd ..",
+    "test:lib": "npm run build:contract && cd tests && cargo test -- --nocapture && cd ..",
+    "format": "cargo fmt --all"
+  },
+  "devDependencies": {
+    "env-cmd": "~10.1.0",
+    "jest": "27",
+    "jest-environment-node": "~26.6.2",
+    "near-cli": "~2.1.1",
+    "nodemon": "~2.0.3",
+    "shelljs": "~0.8.4",
+    "test": "^0.6.0",
+    "ts-jest": "27"
+  },
+  "dependencies": {
+    "@near/ts": "*",
+    "@types/uuid": "^8.3.4",
+    "near-api-js": "^0.44.2",
+    "near-workspaces": "^2.0.0",
+    "regenerator-runtime": "~0.13.5",
+    "toml": "^3.0.0",
+    "uuid": "^8.3.2"
+  }
+}

@@ -1,0 +1,56 @@
+query LaunchPadProject($projectId: ID!, $accountId: ID!) {
+  launchpad_project(project_id: $projectId) {
+    listing_id
+    public
+    project_owner
+    project_token
+    price_token
+    open_sale_1_timestamp
+    open_sale_2_timestamp
+    final_sale_2_timestamp
+    liquidity_pool_timestamp
+    total_amount_sale_project_tokens
+    token_allocation_size
+    token_allocation_price
+    allocations_sold
+    liquidity_pool_project_tokens
+    liquidity_pool_price_tokens
+    fraction_instant_release
+    fraction_cliff_release
+    cliff_timestamp
+    end_cliff_timestamp
+    fee_price_tokens
+    fee_liquidity_tokens
+    status
+    project_name
+    description_token
+    description_project
+    discord
+    twitter
+    telegram
+    website
+    whitepaper
+    project_token_info {
+      name
+      image
+      symbol
+      decimals
+    }
+    dex_id
+    price_token_info {
+      name
+      image
+      symbol
+      decimals
+    }
+    allocation(account_id: $accountId) {
+      account_id
+      listing_id
+      quantity_withdrawn
+      total_quantity
+      total_allocation
+    }
+    project_allocations_sold
+    project_total_amount_sale_project_tokens
+  }
+}

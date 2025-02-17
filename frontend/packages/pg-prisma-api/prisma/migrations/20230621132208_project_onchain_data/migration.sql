@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "mantle_launchpad_metadata" ALTER COLUMN "privatePrice" SET DATA TYPE TEXT,
+ALTER COLUMN "publicPrice" SET DATA TYPE TEXT,
+ALTER COLUMN "totalSale" SET DATA TYPE TEXT,
+ALTER COLUMN "totalSold" SET DATA TYPE TEXT;

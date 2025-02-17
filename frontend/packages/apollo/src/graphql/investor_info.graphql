@@ -1,0 +1,8 @@
+query InvestorInfo($accountId: ID!) {
+  investor_info(account_id: $accountId) {
+    account_id
+    staked_token
+    last_check
+    allocation_count
+  }
+}

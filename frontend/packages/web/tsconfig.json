@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "maxNodeModuleJsDepth":5,
+    "skipLibCheck": true,
+    "skipDefaultLibCheck":true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "noImplicitAny": false,
+    "paths": {
+      "@/*": ["src/*"],
+      "rxjs": ["node_modules/rxjs"],
+      "rxjs/*": ["node_modules/rxjs/*"]
+    },
+    "types": ["vite-plugin-pages/client-react", "vite/client"]
+  },
+  "include": ["./src"],
+  "exclude": ["src/**/*.test.*", "tailwind.config.js" , "src/components/shared/**/*"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

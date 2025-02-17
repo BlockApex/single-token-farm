@@ -1,0 +1,12 @@
+[package]
+name = "testnet_faucet"
+version = "1.0.0"
+authors = ["jack the dev"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "4.0.0"
+near-contract-standards = "4.0.0"

@@ -1,0 +1,39 @@
+query NFTStakingProjectsConnection(
+  $search: String
+  $limit: Int
+  $offset: Int
+  $showStaked: StakedEnum
+) {
+  nft_staking_projects(
+    search: $search
+    limit: $limit
+    offset: $offset
+    showStaked: $showStaked
+  ) {
+    pageSize
+    totalCount
+    itemsPerPage
+    hasNextPage
+    data {
+      collection_id
+      collection_meta {
+        image
+        name
+      }
+      collection_image
+      collection_modal_image
+      collection_owner_id
+      token_address
+      active
+      rewards {
+        spec
+        name
+        symbol
+        icon
+        decimals
+        perMonth
+        account_id
+      }
+    }
+  }
+}

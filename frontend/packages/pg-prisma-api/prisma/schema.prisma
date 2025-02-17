@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model allocations {
+  account_id         String
+  listing_id         Decimal  @db.Decimal(21, 0)
+  quantity_withdrawn Decimal? @db.Decimal(40, 0)
+  total_quantity     Decimal? @db.Decimal(40, 0)
+  total_allocation   Decimal? @db.Decimal(21, 0)
+  listings           listings @relation(fields: [listing_id], references: [listing_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([account_id, listing_id])
+}
+
+model launchpad_investors {
+  account_id   String    @id
+  staked_token Decimal?  @db.Decimal(40, 0)
+  last_check   DateTime? @db.Timestamptz(6)
+}
+
+model listings {
+  listing_id                       Decimal            @id @db.Decimal(21, 0)
+  public                           Boolean?           @default(true)
+  status                           listing_status
+  project_owner                    String?
+  project_token                    String
+  price_token                      String
+  open_sale_1_timestamp            DateTime?          @db.Timestamptz(6)
+  open_sale_2_timestamp            DateTime?          @db.Timestamptz(6)
+  final_sale_2_timestamp           DateTime?          @db.Timestamptz(6)
+  liquidity_pool_timestamp         DateTime?          @db.Timestamptz(6)
+  total_amount_sale_project_tokens Decimal?           @db.Decimal(40, 0)
+  token_allocation_size            Decimal?           @db.Decimal(40, 0)
+  token_allocation_price           Decimal?           @db.Decimal(40, 0)
+  allocations_sold                 Decimal?           @db.Decimal(21, 0)
+  liquidity_pool_project_tokens    Decimal?           @db.Decimal(40, 0)
+  liquidity_pool_price_tokens      Decimal?           @db.Decimal(40, 0)
+  fraction_instant_release         Decimal?           @db.Decimal(40, 0)
+  fraction_cliff_release           Decimal?           @db.Decimal(40, 0)
+  cliff_timestamp                  DateTime?          @db.Timestamptz(6)
+  end_cliff_timestamp              DateTime?          @db.Timestamptz(6)
+  fee_price_tokens                 Decimal?           @db.Decimal(40, 0)
+  fee_liquidity_tokens             Decimal?           @db.Decimal(40, 0)
+  dex_id                           Decimal?           @db.Decimal(21, 0)
+  allocations                      allocations[]
+  listings_metadata                listings_metadata?
+}
+
+model listings_metadata {
+  listing_id          Decimal  @id @db.Decimal(21, 0)
+  project_name        String?
+  description_token   String?
+  description_project String?
+  discord             String?
+  twitter             String?
+  telegram            String?
+  website             String?
+  whitepaper          String?
+  listings            listings @relation(fields: [listing_id], references: [listing_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model processed_events {
+  block_height     Decimal @db.Decimal(21, 0)
+  transaction_hash String
+  event_index      Decimal @db.Decimal(21, 0)
+
+  @@id([block_height, transaction_hash, event_index])
+}
+
+model staked_nfts {
+  nft_id           String
+  collection_id    String
+  owner_id         String?
+  staked_timestamp DateTime?        @db.Timestamptz(6)
+  staking_programs staking_programs @relation(fields: [collection_id], references: [collection_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([collection_id, nft_id])
+}
+
+model staking_programs {
+  collection_id             String                     @id
+  collection_owner_id       String
+  token_address             String
+  min_staking_period        Decimal?                   @db.Decimal(21, 0)
+  early_withdraw_penalty    Decimal?                   @db.Decimal(40, 0)
+  round_interval            Decimal?                   @db.Decimal(21, 0)
+  staked_nfts               staked_nfts[]
+  staking_programs_metadata staking_programs_metadata?
+}
+
+model staking_programs_metadata {
+  collection_id          String           @id
+  collection_image       String?
+  collection_modal_image String?
+  staking_programs       staking_programs @relation(fields: [collection_id], references: [collection_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model x_token_ratios {
+  key_column        BigInt    @id @default(autoincrement())
+  time_event        DateTime? @db.Timestamptz(6)
+  base_token_amount Decimal?  @db.Decimal(40, 0)
+  x_token_amount    Decimal?  @db.Decimal(40, 0)
+}
+
+enum listing_status {
+  unfunded
+  funded
+  sale_finalized
+  pool_created
+  pool_project_token_sent
+  pool_price_token_sent
+  liquidity_pool_finalized
+  cancelled
+}
+
+model mantle_launchpad_metadata {
+  id               String    @id @unique
+  name             String    @default("No Name Provided")
+  description      String    @default("No Description Provided")
+  logo             String?
+  website          String?
+  whitepaper       String?
+  owner            String?
+  privateStartTime DateTime?
+  privateEndTime   DateTime?
+  publicStartTime  DateTime?
+  publicEndTime    DateTime?
+  totalSale        String?
+  totalSold        String?
+  publicPrice      String?
+  privatePrice     String?
+  saleToken        String?
+  vestingToken     String?
+}

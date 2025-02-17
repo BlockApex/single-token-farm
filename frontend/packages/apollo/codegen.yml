@@ -1,0 +1,21 @@
+overwrite: true
+schema:
+  - http://localhost:4000
+documents: "./src/graphql/*.graphql"
+hooks:
+  afterOneFileWrite:
+    - prettier --write
+    - eslint --cache --fix
+generates:
+  ./src/generated/hooks.ts:
+    plugins:
+      - "typescript"
+      - "typescript-operations"
+      - "typescript-react-apollo"
+    config:
+      namingConvention:
+        transformUnderscore: true
+
+  ./src/generated/helpers.ts:
+    plugins:
+      - "typescript-apollo-client-helpers"

@@ -1,0 +1,174 @@
+name: Staging Deploy
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_TESTNET_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_TESTNET_PROJECT_ID }}
+  VITE_GRAPHQL_API_URI: https://staginggraphql.jumpdefi.xyz/
+  NEAR_NETWORK: testnet
+  DB_HOST: ${{ secrets.STAGING_DB_HOST }}
+  DB_NAME: ${{ secrets.STAGING_DB_NAME }}
+  DB_USER: ${{ secrets.STAGING_DB_USER }}
+  DB_PASS: ${{ secrets.STAGING_DB_PASS }}
+  DB_PORT: 5432
+  AWS_REGION: us-east-1
+  ECS_SERVICE: staging-indexer-service
+  ECS_CLUSTER: staging-indexer-cluster
+  ECS_TASK_DEFINITION: services/indexer/task-definition.json
+  CONTAINER_NAME: staging-indexer
+
+on:
+  push:
+    branches:
+      - feat/add-vite-plugin-pages
+
+jobs:
+  vercel_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get timestamp
+        uses: gerred/actions/current-time@master
+        id: current-time
+
+      - name: Run string replace
+        uses: frabert/replace-string-action@master
+        id: format-time
+        with:
+          pattern: '[:\.]+'
+          string: "${{ steps.current-time.outputs.time }}"
+          replace-with: "-"
+          flags: "g"
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          rustup component add rustfmt
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@canary
+
+      - name: Install Yarn Globally
+        run: npm install -g yarn
+
+      - name: Installing Dependencies
+        run: yarn
+
+      # # Deploy testnet contracts
+      # - name: Deploy Contracts
+      #   run: yarn workspace @near/contracts deploy:testnet
+
+      # # Set envs for builds
+      # - name: Set Testnet environment variables
+      #   run: yarn setup:staging:env
+
+      - name: Set AWS S3 LAKE consumer credentials
+        env:
+          AWS_ID: ${{ secrets.AWS_LAKE_KEY_ID }}
+          AWS_SECRET: ${{ secrets.AWS_LAKE_SECRET_KEY }}
+        run: yarn setup:lake:consumer
+
+      # # Clear staging DB
+      # - name: Reset Database
+      #   run: yarn setup:staging:db
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@13d241b293754004c80624b5567555c4a39ffbe3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2
+
+        # Set AWS deployments - Graphql
+      - name: Build, tag, and push GRAPHQL image to Amazon ECR
+        id: build-image-graphql
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: jump-graphql
+          ECR_IMAGE: graphql
+        run: |
+          docker build . -f services/graphql/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE"
+
+      - name: Deploy GRAPHQL to EB
+        uses: einaregilsson/beanstalk-deploy@v14
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: staging-backend-graphql
+          environment_name: Stagingbackendgraphql-env
+          version_label: "staging-backend-graphql-${{ steps.format-time.outputs.replaced }}"
+          region: us-east-1
+          deployment_package: services/graphql/Dockerrun.aws.json
+
+      # # AWS deployment INDEXER
+      # # - name: Build indexer
+      # #   run: yarn indexer:build
+
+      # # - name: Build, tag, and push INDEXER image to Amazon ECR
+      # #   id: build-image-indexer
+      # #   env:
+      # #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      # #     ECR_REPOSITORY: jump-indexer
+      # #     ECR_IMAGE: indexer
+      # #   run: |
+      # #     docker build . -f services/indexer/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE
+      # #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE
+      # #     echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$ECR_IMAGE"
+
+      # # - name: Fill in the new image ID in the Amazon ECS task definition
+      # #   id: task-def
+      # #   uses: aws-actions/amazon-ecs-render-task-definition@97587c9d45a4930bf0e3da8dd2feb2a463cf4a3a
+      # #   with:
+      # #     task-definition: ${{ env.ECS_TASK_DEFINITION }}
+      # #     container-name: ${{ env.CONTAINER_NAME }}
+      # #     image: ${{ steps.build-image-indexer.outputs.image }}
+
+      # # - name: Deploy Amazon ECS task definition
+      # #   uses: aws-actions/amazon-ecs-deploy-task-definition@de0132cf8cdedb79975c6d42b77eb7ea193cf28e
+      # #   with:
+      # #     task-definition: ${{ steps.task-def.outputs.task-definition }}
+      # #     service: ${{ env.ECS_SERVICE }}
+      # #     cluster: ${{ env.ECS_CLUSTER }}
+      # #     wait-for-service-stability: true
+
+      # # - name: Fill in the new image ID in the Amazon ECS task definition INDEXER
+      # #   id: task-def
+      # #   uses: aws-actions/amazon-ecs-render-task-definition@97587c9d45a4930bf0e3da8dd2feb2a463cf4a3a
+      # #   with:
+      # #     task-definition: ${{ env.ECS_TASK_DEFINITION }}
+      # #     container-name: ${{ env.CONTAINER_NAME }}
+      # #     image: ${{ steps.build-image-indexer.outputs.image }}
+
+      # # - name: Deploy Amazon ECS task definition INDEXER
+      # #   uses: aws-actions/amazon-ecs-deploy-task-definition@de0132cf8cdedb79975c6d42b77eb7ea193cf28e
+      # #   with:
+      # #     task-definition: ${{ steps.task-def.outputs.task-definition }}
+      # #     service: ${{ env.ECS_SERVICE }}
+      # #     cluster: ${{ env.ECS_CLUSTER }}
+      # #     wait-for-service-stability: true
+
+      # # Deploy Vercel app
+      # - name: Pull vercel setup
+      #   run: vercel pull --yes --token=${{ secrets.VERCEL_TESTNET_TOKEN }}
+
+      # - name: Build Project Artifacts
+      #   run: vercel build --prod --token=${{ secrets.VERCEL_TESTNET_TOKEN }}
+
+      # - name: Deploy Project Artifacts to Vercel
+      #   run: >
+      #     vercel
+      #     deploy
+      #     --prebuilt
+      #     --prod
+      #     --token=${{ secrets.VERCEL_TESTNET_TOKEN }}
+
+      # # Populate DB with metadata
+      # - name: Populate DB with basic metadata
+      #   run: yarn setup:staging:db:populate

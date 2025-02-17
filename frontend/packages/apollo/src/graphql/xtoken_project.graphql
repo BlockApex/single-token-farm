@@ -1,0 +1,8 @@
+query XJumpProject($timestamp: String) {
+  get_historical_ratio(timestamp: $timestamp) {
+    key_column
+    time_event
+    base_token_amount
+    x_token_amount
+  }
+}

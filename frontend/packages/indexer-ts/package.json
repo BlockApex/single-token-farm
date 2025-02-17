@@ -1,0 +1,23 @@
+{
+  "name": "@near/indexer-ts",
+  "version": "1.0.0",
+  "description": "Indexer to capture events and log to DB",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "scripts": {
+    "compile": "tsc",
+    "entry": "node src/index.js",
+    "start": "yarn compile && yarn entry"
+  },
+  "dependencies": {
+    "big.js": "^6.2.1",
+    "dotenv": "16.0.3",
+    "near-api-js": "^0.44.2",
+    "near-lake-framework": "^1.0.4",
+    "pg": "^8.8.0",
+    "sequelize": "^6.23.2"
+  },
+  "devDependencies": {
+    "@types/big.js": "^6.1.6"
+  }
+}

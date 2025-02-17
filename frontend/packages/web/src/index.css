@@ -1,0 +1,465 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Inter", sans-serif;
+  color: white;
+  width: 100%;
+  min-height: 100vh;
+  /* overflow: hidden; */
+  /* background: radial-gradient(
+      40.33% 70.37% at 50% 80%,
+      #340000 0%,
+      #21002f 100%
+    )
+    #340000; */
+}
+
+.progress {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  position: relative;
+  margin: 15px 0;
+  height: 10px;
+  width: 100%;
+}
+
+.progress-done {
+  background: #fff;
+  /* box-shadow: 0 3px 3px -5px #F2709C, 0 2px 5px #F2709C; */
+  border-radius: 4px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 0;
+  opacity: 0;
+  transition: 1s ease 0.3s;
+}
+
+::-webkit-scrollbar {
+  -webkit-appearance: none !important;
+  width: 4px !important;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 4px !important;
+  background-color: rgba(250, 250, 250, 0.2) !important;
+  -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5) !important;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltip {
+  border-radius: 25px;
+  background-color: #894da0;
+  font-family: "Inter", sans-serif;
+  padding: 15px;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltip-header {
+  padding-top: 6px;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltiptext {
+  color: white;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.member-area-tooltip {
+  padding: 0 !important;
+}
+
+.member-area-tooltip .introjs-helperNumberLayer {
+  color: white;
+  position: absolute !important;
+  width: 100% !important;
+  bottom: 0 !important;
+  margin-bottom: 50px !important;
+}
+
+.member-area-tooltip .introjs-tooltiptext {
+  padding: 0 40px 0 33px !important;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltiptext li {
+  line-height: 20px;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltip-title {
+  color: white;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 18px;
+}
+
+.introjs-tooltipReferenceLayer .introjs-arrow {
+  display: none !important;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltipbuttons {
+  border-top: unset;
+}
+
+.member-area-tooltip .introjs-tooltipbuttons {
+  padding: 0 40px 0 33px !important;
+  margin-bottom: 20px !important;
+}
+
+.introjs-tooltipReferenceLayer .introjs-button {
+  /* padding: 30px 20px !important; */
+  font-size: 14px;
+  border-radius: 9.59px;
+  font-family: "Inter", sans-serif;
+  line-height: 18px;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.introjs-tooltipReferenceLayer .introjs-button.introjs-prevbutton {
+  color: white;
+  border: 1px solid white;
+  background-color: transparent;
+  text-decoration: none;
+  content: "Previous";
+}
+
+.introjs-tooltipReferenceLayer .introjs-button.introjs-nextbutton {
+  border: 1px solid white;
+  background-color: #fff;
+  text-decoration: none;
+  color: #431e5a;
+}
+
+.introjs-tooltipReferenceLayer .introjs-skipbutton {
+  color: white;
+}
+
+.introjs-tooltipReferenceLayer .introjs-skipbutton:hover {
+  opacity: 0.7;
+}
+
+.introjs-tooltipReferenceLayer .introjs-disabled {
+  opacity: 0.4;
+}
+
+.introjs-tooltipReferenceLayer .introjs-helperLayer {
+  border-radius: 25px;
+}
+
+.member-area-tooltip {
+  margin-right: 0px !important;
+  min-height: 330px !important;
+}
+
+.member-area-tooltip .introjs-tooltipbuttons {
+  position: absolute !important;
+  width: 100% !important;
+  bottom: 0 !important;
+}
+
+.member-area-tooltip .introjs-arrow {
+  display: none !important;
+}
+
+@media (min-width: 640px) {
+  .introjs-tooltip.member-area-tooltip {
+    width: 433px;
+    max-width: 433px !important;
+    max-height: 290px !important;
+    min-height: none !important;
+  }
+
+  .member-area-tooltip .introjs-tooltipbuttons {
+    padding: 0 40px 0 33px !important;
+    margin-bottom: 38px !important;
+  }
+
+  .member-area-tooltip .introjs-helperNumberLayer {
+    margin-bottom: 39px !important;
+  }
+}
+
+/* Step Guide Styling for xJump page */
+
+.introjs-tooltipReferenceLayer .xJump {
+  @apply rounded-lg bg-purple-100 pt-[30px] px-9 pb-[38px] w-[433px] max-w-[433px] min-h-[290px] box-border;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltip-header {
+  @apply p-0 flex items-center mt-[-4px] ml-[-8px];
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltip-title {
+  @apply text-white font-bold leading-4 tracking-normal min-h-0 ml-8;
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-skipbutton {
+  @apply absolute text-white font-extralight leading-4.5 flex justify-center items-center top-[-1.5rem] right-[-1.5rem];
+  font-family: "Inter", sans-serif;
+  font-size: 2rem;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-skipbutton:hover,
+.introjs-tooltipReferenceLayer .xJump .introjs-skipbutton:focus {
+  @apply text-white opacity-70;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext {
+  @apply p-0 pb-8;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext h5 {
+  @apply text-white font-bold leading-5 p-0 pt-3;
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext p {
+  @apply text-white text-3.5 font-normal leading-4.5 p-0 pt-2;
+  font-family: "Inter", sans-serif;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext a,
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext a:visited {
+  @apply p-0 border-b-[.0625rem] border-white-200;
+  font-family: "Inter", sans-serif;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext a:hover,
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltiptext a:focus {
+  @apply opacity-70;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltipbuttons {
+  @apply p-0 absolute inset-9 top-auto h-10;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-tooltipbuttons a {
+  @apply px-5;
+}
+
+.introjs-tooltipReferenceLayer .xJump .introjs-helperNumberLayer {
+  @apply absolute left-0 right-0 font-bold bottom-9 pb-3 w-full flex justify-center items-center text-white text-3.5 tracking-tighter;
+}
+
+.no-tier {
+  background: linear-gradient(90deg, #510b72 0%, #740b0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.diamond {
+  background: linear-gradient(90deg, #9795f0 0%, #fbc8d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.platinum {
+  background: linear-gradient(90deg, #26b06e 0%, #9eefc8 64.58%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.tungsten {
+  background: linear-gradient(90deg, #7d85ce 0%, #b7bce7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.gold {
+  background: linear-gradient(90deg, #eabf28 0%, #dcce9c 59.38%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.silver {
+  background: linear-gradient(90.15deg, #686868 0.13%, #c8c8c8 61.3%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.bronze {
+  background: linear-gradient(90deg, #cd7f32 -0.39%, #ffc184 72.9%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+}
+
+.pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+  background-color: rgba(255, 165, 0, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.pagination-button {
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  margin: 0 5px;
+  font-size: 14px; /* Adjust font size */
+}
+
+.pagination-button:disabled {
+  cursor: not-allowed;
+  color: #ccc;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  list-style-type: none;
+  padding: 0;
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.pagination li {
+  margin: 0 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination li.active {
+  font-weight: bold;
+  background-color: #d9d9d94d;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+.pagination li a {
+  text-decoration: none;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .pagination-wrapper {
+    padding: 0.3rem; /* Reduce padding for smaller screens */
+  }
+
+  .pagination li {
+    margin: 0 5px;
+  }
+
+  .pagination li a {
+    font-size: 10px; /* Reduce font size */
+  }
+
+  .pagination-button {
+    font-size: 12px; /* Adjust button font size */
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-wrapper {
+    padding: 0.2rem; /* Further reduce padding */
+  }
+
+  .pagination li {
+    margin: 0 3px;
+  }
+
+  .pagination li a {
+    font-size: 9px; /* Further reduce font size */
+  }
+
+  .pagination-button {
+    font-size: 10px; /* Adjust button font size */
+  }
+
+  .pagination li {
+    display: none; /* Hide all pagination numbers on very small screens */
+  }
+
+  .pagination li.active,
+  .pagination li:first-child,
+  .pagination li:last-child {
+    display: flex; /* Show only the active, first, and last buttons */
+  }
+}
+
+.react-flow__handle {
+  visibility: hidden;
+}
+
+
+@keyframes slow-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.slow-spin {
+  animation: slow-spin 3s linear infinite;
+}
+
+
+
+
+.scroll-container {
+  overflow-x: scroll;
+  /* Ensure the scroll container has a defined height/width for scrolling */
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color:#888 transparent; /* For Firefox */
+}
+
+/* For Chrome, Edge, and Safari */
+.scroll-container::-webkit-scrollbar {
+  width: 6px;  /* Width of the vertical scrollbar */
+  height: 6px; /* Height of the horizontal scrollbar */
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: transparent;  /* Background of the scrollbar track */
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+
+  border-radius: 10px;     /* Round the corners of the thumb */
+  border: 2px solid transparent; /* Add padding around thumb for better appearance */
+}
+
+/* On hover, you can change the thumb style */
+.scroll-container::-webkit-scrollbar-thumb:hover {
+  background-color: transparent; /* Darker color when hovering */
+}
+
+
+input[type="date"]::-webkit-clear-button {
+  display: none; /* Hides the clear button in Chrome */
+}
+
+input[type="date"]::-webkit-inner-spin-button {
+  display: none; /* Hides the spinner in Chrome */
+}

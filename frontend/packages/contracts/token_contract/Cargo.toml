@@ -1,0 +1,12 @@
+[package]
+name = "token_contract"
+version = "1.0.0"
+authors = ["vote for pedro"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+modified-contract-standards = { path = "../contract_libs/modified_contract_standards" }
+near-sdk = "3.1.0"

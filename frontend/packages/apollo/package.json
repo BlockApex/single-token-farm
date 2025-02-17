@@ -1,0 +1,22 @@
+{
+  "name": "@near/apollo",
+  "description": "This is the repo where code generators will run for graphql queries to improove developer experience",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {
+    "@apollo/client": "^3.6.9",
+    "@graphql-codegen/add": "^3.1.1",
+    "@graphql-codegen/cli": "^2.3.1",
+    "@graphql-codegen/typescript": "^2.4.2",
+    "@graphql-codegen/typescript-apollo-client-helpers": "^2.1.9",
+    "@graphql-codegen/typescript-operations": "^2.2.2",
+    "@graphql-codegen/typescript-react-apollo": "^3.2.3",
+    "@graphql-codegen/typescript-resolvers": "^2.4.3",
+    "@types/js-cookie": "^3.0.1",
+    "graphql-scalars": "^1.14.1"
+  },
+  "scripts": {
+    "generate": "graphql-codegen --config codegen.yml"
+  }
+}

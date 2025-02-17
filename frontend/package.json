@@ -1,0 +1,86 @@
+{
+  "name": "near.monorepo",
+  "version": "1.0.0",
+  "description": "Near Contract and React Monorepo",
+  "private": true,
+  "scripts": {
+    "apollo:generate": "yarn workspace @near/apollo generate",
+    "gql:dev": "yarn workspace @near/graphql dev:testnet",
+    "gql:dev:mainnet": "yarn workspace @near/graphql dev:mainnet",
+    "gql:start:mainnet": "yarn workspace @near/graphql start:mainnet",
+    "gql:start:testnet": "yarn workspace @near/graphql start:testnet",
+    "gql:start": "yarn workspace @near/graphql start",
+    "web:dev": "yarn workspace @near/web dev --host",
+    "web:build": "yarn workspace @near/web build",
+    "contract:build": "yarn workspace @near/contracts build:contract",
+    "contract:cargo:tests": "yarn workspace @near/contracts test:rust",
+    "contract:lib:tests": "yarn workspace @near/contracts test:lib",
+    "indexer:build": "yarn workspace @near/indexer build",
+    "db:dev": "docker run --rm -P -p 127.0.0.1:5438:5432 -it $(docker build -q services/db)",
+    "postinstall": "husky install",
+    "format:rust": "sh ./format_rust.sh",
+    "precommit": "lint-staged",
+    "setup:lake:consumer": "node .github/utilities/build_aws_lake_credentials.js",
+    "setup:testnet:env": "node .github/utilities/set_testnet_environments.js",
+    "setup:staging:env": "node .github/utilities/set_staging_environments.js",
+    "setup:mainnet:env": "node .github/utilities/set_mainnet_environments.js",
+    "setup:staging:db": "node .github/utilities/database_reset.js",
+    "setup:staging:db:populate": "node .github/utilities/database_basic_populate.js",
+    "deploy:testnet": "yarn workspace @near/contracts deploy:testnet",
+    "local:env": "NEAR_NETWORK=testnet node .github/utilities/set_local_environments.js",
+    "local:run": "yarn local:env && cd services/localtest && docker-compose rm -v db && docker compose up --force-recreate --build",
+    "local:full": "yarn deploy:testnet && yarn local:run",
+    "local:seeder": "node .github/utilities/database_basic_populate.js"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn precommit"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "yarn prettier --config .prettierrc --write **/*.{ts,tsx}"
+    ],
+    "*.{js,jsx}": [
+      "yarn prettier --config .prettierrc --write **/*.{js,jsx}"
+    ],
+    "*.rs": [
+      "sh ./format_rust.sh"
+    ]
+  },
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "nohoist": [
+      "**/tailwindcss",
+      "**/tailwindcss/**",
+      "**/postcss",
+      "**/postcss/**",
+      "**/autoprefixer",
+      "**/autoprefixer/**"
+    ]
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@commitlint/cli": "^16.0.1",
+    "@commitlint/config-conventional": "^16.0.0",
+    "@types/jest": "^27.5.0",
+    "@types/sequelize": "^4.28.13",
+    "@typescript-eslint/eslint-plugin": "^5.22.0",
+    "@typescript-eslint/parser": "^5.22.0",
+    "eslint": "^8.15.0",
+    "eslint-plugin-react": "^7.29.4",
+    "husky": "^8.0.1",
+    "lint-staged": "^12.4.1",
+    "nodemon": "^2.0.15",
+    "prettier": "^2.6.2",
+    "sequelize": "^6.21.2"
+  },
+  "dependencies": {
+    "@types/styled-components": "^5.1.34",
+    "@xyflow/react": "^12.0.4",
+    "reactflow": "^11.11.4",
+    "styled-components": "^6.1.12"
+  }
+}

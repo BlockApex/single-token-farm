@@ -1,0 +1,9 @@
+{
+  "name": "@near/indexer",
+  "version": "0.0.1",
+  "license": "UNLICENSED",
+  "main": "lib/index.ts",
+  "scripts": {
+    "build": "cargo build --release"
+  }
+}

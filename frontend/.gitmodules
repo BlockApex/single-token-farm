@@ -1,0 +1,3 @@
+[submodule "packages/indexer/nearcore"]
+	path = packages/indexer/nearcore
+	url = git@github.com:near/nearcore.git

@@ -1,0 +1,37 @@
+{
+  "name": "@near/graphql",
+  "version": "1.0.0",
+  "description": "This is the Graphql Lambda that will return indexed data ",
+  "main": "src/server.ts",
+  "repository": "http://github.com/hack-a-chain/jump.project",
+  "author": "Hack a Chain",
+  "license": "MIT",
+  "private": true, 
+  "scripts": {
+    "start": "ts-node -r tsconfig-paths/register src/server.ts --bind 0.0.0.0",
+    "start:mainnet": "ENV=MAINNET ts-node -r tsconfig-paths/register src/server.ts",
+    "start:testnet": "ENV=TESTNET ts-node -r tsconfig-paths/register src/server.ts",
+    "dev:mainnet": "ENV=MAINNET ts-node-dev -r tsconfig-paths/register src/server.ts",
+    "dev:testnet": "ENV=TESTNET ts-node-dev -r tsconfig-paths/register src/server.ts"
+  },
+  "dependencies": {
+    "@near/apollo": "*",
+    "@types/express": "^4.17.13",
+    "@types/jsonwebtoken": "^8.5.8",
+    "apollo-server": "^3.9.0",
+    "big.js": "^6.2.1",
+    "bn.js": "^5.2.1",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "graphql": "^16.5.0",
+    "jsonwebtoken": "^8.5.1",
+    "near-api-js": "^0.45.1",
+    "pg": "^8.7.3",
+    "pg-hstore": "^2.3.4",
+    "ts-node": "^10.8.1",
+    "ts-node-dev": "^2.0.0"
+  },
+  "devDependencies": {
+    "tsconfig-paths": "^4.0.0"
+  }
+}

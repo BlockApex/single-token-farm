@@ -1,0 +1,10 @@
+{
+  "name": "@near/ts",
+  "version": "1.0.0",
+  "description": "This is the package that will have all the types exported to the Contract Interfaces",
+  "main": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {
+    "near-api-js": "^0.44.2"
+  }
+}

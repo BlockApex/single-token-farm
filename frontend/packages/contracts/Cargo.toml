@@ -1,0 +1,27 @@
+[workspace]
+# Add location of contracts here
+members = [
+  # we can't have nft_staking as a workspace member until we
+  # upgrade every contract to near_sdk@4.0.0
+  # https://github.com/rust-lang/cargo/issues/7880
+  # "./nft_staking",
+  "./nft_contract",
+  "./mintable_token_contract",
+  "./token_contract",
+  "./vesting_contract",
+  "./testnet_faucet",
+  "./x_token",
+  "./locked_token",
+  "./launchpad",
+  "./token_launcher"
+]
+
+[profile.release]
+codegen-units = 1
+# s = optimize for binary size ("z" would additionally turn off loop vectorization)
+opt-level = "z"
+# link time optimization
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
